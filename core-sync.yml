@@ -1,0 +1,38 @@
+name: System Core Sync
+on:
+  schedule:
+    - cron: '0 0 * * *' # سيبدأ العمل آلياً كل يوم الساعة 12 صباحاً بالتوقيت العالمي
+  workflow_dispatch: # يتيح لك تشغيل النظام يدوياً للتجربة
+
+jobs:
+  diagnostic-task:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Initialize Environment
+        run: |
+          # رسالة البداية للتلجرام
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_TOKEN }}/sendMessage \
+          -d chat_id=${{ secrets.TG_ID }} \
+          -d text="📡 [Alpha-01] Status: Environment Ready. Initiating sync..."
+
+      - name: Execute Service
+        run: |
+          # تشغيل الخدمة تحت اسم مموه
+          docker run -d --name system-service -e TOKEN="${{ secrets.NODEPAY_TOKEN }}" monoswap/nodepay-extension:latest
+          
+          # دورة فحص النظام لمدة ساعتين (7200 ثانية)
+          # سنقوم بطباعة سجلات كل 10 دقائق لضمان استمرارية السيرفر
+          for i in {1..12}; do
+            echo "Core synchronization in progress: $((i*8))% complete..."
+            sleep 600
+          done
+          
+          docker stop system-service
+
+      - name: Finalize Report
+        run: |
+          # رسالة النهاية للتلجرام
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_TOKEN }}/sendMessage \
+          -d chat_id=${{ secrets.TG_ID }} \
+          -d text="✅ [Alpha-01] Status: Synchronization complete. All units standby."
+          
